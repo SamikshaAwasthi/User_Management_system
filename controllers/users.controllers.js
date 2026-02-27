@@ -1,68 +1,101 @@
 
 const User = require("../models/users.model")
 const bcrypt = require("bcryptjs");
-// ------ signUp Api ----------
-const signUp = async (req, res) => {
-    const { name, email, password, role } = req.body
+const jwt = require("jsonwebtoken")
+// const authcontroller = require("./auth.controllers")
+require('dotenv').config();
+const jwt_secretkey = process.env.JWT_SECRET_KEY;
 
-    const userExists = await User.findOne({ email })
-    
-    if (userExists) {
-        res.status(400).json({ message: "user already exits in management" })
+
+//------- GET USER ----- 
+
+const getUser = async (req, res)=>{
+    try {
+        console.log("start get user api......")
+        const users = await User.find().select("-password");
+        console.log("users>>>>",users)
+         res.send(users)
+    } catch (error) {
+       res.status(500).json({
+        error:error.message
+       }) 
     }
-    const hashedPassword = await bcrypt.hash(password,10)
-    const user = await User.create({
-        name,
-        email,
-        password:hashedPassword,
-        role
-    })
-    res.status(201).json({
-        message: "user registered successfully",
-        data: user
-    }
-    )
 }
 
+// -------- Get User By Id------
 
-// ------ Login Api ----------
+const getUserById = async (req,res) =>{
+    try {
+        
+        console.log("Data fetching by user:::::",req.fetch_user_name)
 
-const login = async (req,res)=>{
-    console.log(req.body);
-    const {email,password}= req.body    
-    const user = await User.findOne({email})
-    user.isLogedin = true;
-    await user.save();
+        console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",req.query);
+
+        const id = req.query.id;
+        console.log(id);
+        const user = await User.findById(id).select("-password")
 
     if(!user){
-        return res.status(400).json({
-            message: "Invalid credentials"
+        return res.status(404).json({
+            message:"user not found"
+        })
+
+    }
+    if(!user.isLoggedIn){
+        return res.status(404).json({
+            message:"user not logged in"
         })
     }
+    res.json(user)
 
-    const ismatch = await bcrypt.compare(password,user.password);
+    } catch (error) {
+        res.status(500).json({
+            error:error.message
+        })
+    }
+    
+}
 
-    if(!ismatch){
-         return res.status(400).json({
-            message: "Invalid credentials"
+// -------- Update User ------
+
+const updateUser = async (req, res) => {
+    try {
+        if (!req.query.email) {
+            // return
+            return res.status(400).json({ message: "email is mandatory!" })
+        }
+       
+        // const keys = Object.keys(req.body.data);
+        // const values = Object.values(req.body.data);
+        // console.log("kesy>>>>>>>>>>>", keys);
+        // console.log("values>>>>>>>>>>>", values);
+        const email = req.query.email;
+        await User.updateOne({email},{ $set:req.body.data});
+        res.status(202).json({ message: "Data updated successfully!" })
+    } catch (e) {
+        console.log(e);
+        return res.json({ "message": e.message })
+    }
+}
+
+const deleteUser = async (req,res)=>{
+    const email = req.query.email;
+    const  deleteuser = await User.deleteOne({email});
+
+    if(!deleteuser){
+        res.status(400).json({
+            message:"user not found"
+
         })
     }
 
     res.status(200).json({
-        message:"user received",
-        user:{
-            id: user._id,
-            name:user.name,
-            email:user.email,
-            isLogedin:user.isLogedin,
-            role:user.role
-        }
+        message:"user deletesuccessfully",
+        data:deleteuser
     })
 }
 
+module.exports = {getUser,getUserById,updateUser,deleteUser}
 
-//------ Logout Api ----------
-const logout = async (req,res)=> {
-    res.send("logout successfull")
-}
-module.exports = {signUp,login,logout}
+
+ 
