@@ -71,7 +71,7 @@ const login = async (req,res)=>{
     res.status(200).json({
         message:"user received",
         user:{
-            id: user._id,
+            id: user.id,
             name:user.name,
             email:user.email,
             isLoggedIn:user.isLoggedIn,
@@ -83,12 +83,9 @@ const login = async (req,res)=>{
 //verify user
 const getProfile = async (req, res) => {
     try {
-            console.log("Data fetching by user:::::",req.fetch_user_name)
-    
-            console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>",req.query);
-            const id = req.query.id;
-            console.log(id);
-            const user = await User.findById(id).select("-password")
+           console.log("Decoded user from token:", req.user);
+           
+            const user = await User.findById(req.user.id).select("-password")
     
         if(!user){
             return res.status(404).json({
@@ -96,11 +93,7 @@ const getProfile = async (req, res) => {
             })
     
         }
-        if(!user.isLoggedIn){
-            return res.status(404).json({
-                message:"user not logged in"
-            })
-        }
+        
         res.json(user)
     
         } catch (error) {
